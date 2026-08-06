@@ -31,8 +31,34 @@
 - **대안**: react-leaflet(라벨 언어 고정, 기각) / MapLibre+OpenFreeMap+언어 플러그인
   (구현 가능하나 메리트 부족, 기각) / Google Maps JS API(유료 성격이라 "100% 무료
   인프라" 원칙과 충돌, 미검토).
-- **결과**: `PROJECT_PLAN.md`의 기술 스택(Frontend 배포: Vercel/Expo Web)과
-  로드맵(Phase 4 "공유 웹 구현")을 이 결정에 맞게 수정할지 사용자 확인 필요.
-  스파이크 폴더(`/spikes/maps-compat`)는 정리 여부 확인 필요.
+- **결과**: `PROJECT_PLAN.md`의 기술 스택(Frontend 배포: Vercel/Expo Web 제거)과
+  로드맵(Phase 4 "공유 웹 구현" → "공유 기능 구현", Phase 5 배포 문구 수정),
+  리스크 목록 항목 1을 [해결됨]으로 수정 완료. 스파이크 폴더(`/spikes/maps-compat`)는 삭제함.
+
+---
+
+## [Phase 1] 모노레포 구조 세팅 (`/apps/app`, `/apps/server`)
+
+- **시도**: Git 저장소 초기화 + `/apps/app`(Expo TS), `/apps/server`(FastAPI)
+  뼈대 생성.
+- **선택**:
+  - Git: 프로젝트에 저장소가 없어 `git init` + 루트 `.gitignore` 후 초기 커밋.
+  - 모노레포 도구 미도입: `/apps/app`(JS)과 `/apps/server`(Python)는 언어가
+    달라 공유 코드가 없으므로 npm/pnpm workspace 없이 단순 폴더 분리.
+  - Expo SDK 54 고정: 직전 스파이크에서 테스트폰의 Expo Go 앱이 SDK 54까지만
+    지원함을 확인했으므로, 최신(57)으로 생성 후 `expo install expo@54.0.36` +
+    `expo install --fix`로 다운그레이드. `expo-doctor` 18/18 통과 확인.
+    템플릿이 남긴 `apps/app/AGENTS.md`의 버전 문서 링크도 v54로 수정.
+  - `/apps/server`: `venv` + `requirements.txt`(Render 무료 배포 가이드와 동일
+    방식). `/health` 엔드포인트만 있는 최소 스켈레톤 — DB/JWT/Upstage 연동은
+    Phase 2 범위.
+- **이유**: Phase 1은 인프라/뼈대 세팅만 담당하고 기능 코드는 각 Phase(2, 3)에서
+  만들기로 스코프를 고정. Python/JS가 공유할 코드가 없는 상태에서 workspace
+  도구는 불필요한 추상화.
+- **대안**: pnpm/npm workspace(공유 코드 생기기 전까지는 이득 없어 기각),
+  Poetry(설치 편의성 대비 배포 설정 복잡도 증가로 기각).
+- **결과**: `npx expo start` → Android Expo Go로 기본 템플릿 화면 렌더링 확인,
+  `uvicorn main:app` → `curl localhost:8000/health` 정상 응답 확인. 초기 커밋
+  완료 (`9750da9`).
 
 ---
