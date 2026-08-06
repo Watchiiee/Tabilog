@@ -1,14 +1,15 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import get_current_user_id
 from db import get_db
 from deps import get_owned_trip
-from models import Trip
+from models import Place, Trip
 from schemas import TripCreate, TripOut, TripUpdate
+from upstage import UpstageError, generate_trip_summary
 
 router = APIRouter(prefix="/trips", tags=["trips"])
 
@@ -70,3 +71,27 @@ async def delete_trip(
     trip = await get_owned_trip(trip_id, db, user_id)
     await db.delete(trip)
     await db.commit()
+
+
+@router.post("/{trip_id}/summary", response_model=TripOut)
+async def generate_summary(
+    trip_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    trip = await get_owned_trip(trip_id, db, user_id)
+    result = await db.execute(
+        select(Place).where(Place.trip_id == trip_id).order_by(Place.visit_order)
+    )
+    places = result.scalars().all()
+
+    try:
+        badge, essay = await generate_trip_summary(trip, places)
+    except UpstageError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    trip.sentiment_badge = badge
+    trip.solar_summary = essay
+    await db.commit()
+    await db.refresh(trip)
+    return trip

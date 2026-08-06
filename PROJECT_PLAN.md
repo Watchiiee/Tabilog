@@ -45,10 +45,13 @@
    Android(+iOS) Expo 앱에 집중하기로 결정. 상세 내용은 `DECISION_LOG.md` 참조.
 2. **EXIF 데이터 소실** — 카카오톡/인스타 경유 사진, 스크린샷은 EXIF 없음.
    수동 위치 지정 fallback을 핵심 플로우에 포함할 것.
-3. **Cloudinary unsigned preset 노출 리스크** — 폴더/사이즈/포맷 제한을
-   preset 자체에 반드시 설정.
+3. ~~**Cloudinary unsigned preset 노출 리스크**~~ — **[해결됨]** `tabilog_unsigned`
+   preset에 폴더 고정/포맷 제한/10MB 크기 제한/public_id 강제를 설정하고
+   curl로 실제 거부 동작까지 확인. 상세 내용은 `DECISION_LOG.md` 참조.
 4. **게스트 모드 → 로그인 전환 시 데이터 병합 정책** — 미정, Phase 2에서 결정 필요.
-5. **Upstage Solar API 호출 실패/타임아웃 시 fallback UX** — 미정, Phase 2~3에서 결정 필요.
+5. ~~**Upstage Solar API 호출 실패/타임아웃 시 fallback UX**~~ — **[해결됨]**
+   실패 시 DB는 유지하고 502만 반환, 자동 재시도는 하지 않음(사용자가 다시
+   호출). 상세 내용은 `DECISION_LOG.md` 참조.
 
 ## 작업 원칙
 - 한 번에 하나의 Phase만 진행. 다음 Phase로 넘어가기 전 사용자 승인 필요.

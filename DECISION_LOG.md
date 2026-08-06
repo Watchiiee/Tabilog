@@ -173,3 +173,25 @@
   place/photo까지 cascade 삭제되는 것까지 모두 확인.
 
 ---
+
+## [Phase 2] Upstage Solar 연동 (감성 에세이/뱃지) — 리스크 #5 해결
+
+- **시도**: `POST /trips/{trip_id}/summary`에서 trip+places 정보로 Upstage
+  Solar를 호출해 `solar_summary`/`sentiment_badge`를 생성.
+- **API 스펙 확인**: `POST https://api.upstage.ai/v1/chat/completions`
+  (OpenAI 호환, `Authorization: Bearer`), 모델 `solar-pro2`. JSON 모드에
+  의존하지 않고 `BADGE:`/`ESSAY:` 두 줄 형식으로만 답하도록 프롬프트에서
+  강제하고 문자열 파싱 — 모델이 바뀌어도 덜 깨지는 방식.
+- **리스크 #5 (Upstage 실패/타임아웃 fallback) 결정**: 실패(타임아웃/비2xx/
+  파싱 실패) 시 DB는 변경하지 않고 502로 응답. 백엔드에서 자동 재시도는
+  하지 않음 — 사용자가 명시적으로 다시 호출(프론트 재시도 버튼은 Phase 3).
+- **프롬프트 버그 수정**: 처음에 "200자 내외"로 글자수를 지시했더니 모델이
+  본문 끝에 `(200자)`를 그대로 붙여서 응답 — "글자수를 괄호로 표시하지 마"를
+  명시하고 "3~5문장" 기준으로 바꿔서 해결.
+- **결과 (실제 Upstage 호출로 검증)**: 장소 2개가 있는 trip과 장소가 없는
+  빈 trip 모두 정상적으로 감성 일기/뱃지 생성 확인. 검증 중 한 번 실제로
+  transient 오류(원인 불명, 재현 안 됨)가 발생했는데, 설계한 대로 DB는
+  그대로 유지되고 502만 반환됐으며, 곧바로 재호출하니 정상 처리됨 —
+  fallback 정책이 실제로 의도대로 동작함을 우연히 실전 검증.
+
+---
