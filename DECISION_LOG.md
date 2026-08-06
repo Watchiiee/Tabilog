@@ -311,3 +311,32 @@
   직접 수정 또는 EXIF 자동 채움 둘 다 정상적으로 장소 생성에 반영됨.
 
 ---
+
+## [Phase 4] 지도 경로 애니메이션 재생 — Reanimated는 Expo Go에서 사용 불가로 순수 JS로 대체
+
+- **시도**: 위치가 있는 장소들을 순서대로 이어서 애니메이션으로 재생하는
+  `trips/[id]/replay.tsx` 화면. `PROJECT_PLAN.md` 기술 스택대로 처음엔
+  `react-native-reanimated`(+필수 peer `react-native-worklets`)로 구현.
+- **발견 사실 (empirical)**: 설치 후 실행하니 `Exception in HostFunction:
+  installTurboModule ...` 에러, worklets를 명시적으로 추가한 뒤에는 앱이
+  아예 꺼져버리는 크래시로 악화됨. 리서치 결과 **Reanimated v4는 New
+  Architecture 관련 네이티브 구조상 Expo Go에서 지원되지 않고 커스텀 개발
+  빌드가 필요**함을 확인 — `expo-media-library`(EXIF GPS 스파이크 때)와 같은
+  종류의 벽.
+- **선택**: 이번에도 커스텀 개발 빌드로 전환하지 않고, `react-native-reanimated`/
+  `react-native-worklets`를 제거하고 순수 `requestAnimationFrame` + 일반
+  React state로 동일한 애니메이션(구간 보간, 지나온 경로 Polyline 진하게
+  덧그리기)을 재구현. 지도는 시작 전에 `fitToCoordinates`로 전체 경로가
+  보이게 고정, 균등 시간(장소 1개 구간당 1.2초)으로 재생.
+- **이유**: Reanimated가 주는 이점(워크릿 기반 UI 스레드 애니메이션)은 지금
+  요구사항(지도 위 마커 이동)에는 필수가 아니고, `requestAnimationFrame`
+  방식으로도 체감상 충분히 부드럽게 동작함. 개발 빌드 전환은 이걸 위해
+  들일 비용에 비해 이득이 낮음 — 두 번째로 같은 벽에 부딪힌 것이라, EAS
+  Build 도입 여부는 이제 별도로 진짜 필요해질 때(예: 두 기능 다시 걸리면)
+  재검토할 사안으로 굳어짐.
+- **결과**: Android Expo Go에서 실제 확인 — 전체 경로가 지도에 맞춰 보이고,
+  "재생" 시 마커가 장소 순서대로 이동하며 지나온 구간이 파란 선으로 그려짐.
+  장소가 1개뿐이면 "재생할 경로가 부족해요" 안내로 처리됨. 스타일은 최소
+  수준(기능 검증 우선)이라 이후 UI 다듬기는 로직과 독립적으로 가능.
+
+---

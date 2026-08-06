@@ -13,7 +13,7 @@
 | 구분 | 기술 | 역할 |
 |---|---|---|
 | Frontend | React Native (Expo) | Android 타겟 (iOS는 추후 기기 확보 시 재검증) |
-| 상태/애니메이션 | Reanimated, Zustand | 지도 애니메이션, 전역 상태 |
+| 상태/애니메이션 | ~~Reanimated~~(Expo Go 미지원, RN 기본 애니메이션 API로 대체), Zustand | 지도 애니메이션, 전역 상태 |
 | Backend | FastAPI (Python) | REST API, JWT 검증, Upstage 연동 |
 | Backend 배포 | Render | 무료 웹 서비스 (월 750h) |
 | AI | Upstage Solar API | 감성 에세이, 감성 뱃지 |
