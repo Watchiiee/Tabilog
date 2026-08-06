@@ -62,3 +62,25 @@
   완료 (`9750da9`).
 
 ---
+
+## [Phase 1] Supabase Auth 연결 확인
+
+- **시도**: 기존에 만들어둔 Supabase 프로젝트(URL/anon key)를 `/apps/app`에서
+  최소 연결까지만 확인. Kakao/Google 소셜 로그인 UI 자체는 Phase 3 범위로 남김.
+- **선택**:
+  - `@supabase/supabase-js` + `react-native-url-polyfill`(RN 환경 URL polyfill 요구사항)
+    + `@react-native-async-storage/async-storage`(세션 영속 저장)를 설치.
+  - 클라이언트 초기화는 `apps/app/lib/supabase.ts`로 분리, URL/anon key는
+    `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_ANON_KEY` 환경변수로 주입.
+  - 실제 키는 `apps/app/.env`(커밋 안 함, 루트 `.gitignore`가 커버), 키 이름만
+    담은 `apps/app/.env.example`은 커밋.
+  - anon(publishable) key만 사용 — service role(secret) key는 요청/사용하지
+    않음 (그건 서버 전용, Phase 2 범위).
+- **이유**: Phase 1은 인프라 연결 확인만 담당. 로그인 UI/소셜 프로바이더 설정은
+  각 플랫폼 개발자 앱 등록이 필요해 범위가 커지므로 Phase 3로 미룸.
+- **결과**: `App.tsx`에 임시로 `supabase.auth.getSession()` 호출을 넣고 Expo Go로
+  실행 → Metro 로그에 `[supabase] connection OK, session: null` 확인 (세션 없음은
+  로그인 UI가 아직 없으므로 정상, 연결 자체는 성공). 확인 후 임시 코드는 제거해
+  `App.tsx`를 템플릿 상태로 되돌림 — `lib/supabase.ts`는 Phase 3에서 재사용.
+
+---
