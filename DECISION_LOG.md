@@ -373,3 +373,23 @@
   (view-shot/sharing 둘 다 리서치에서 예측한 대로 문제없이 동작).
 
 ---
+
+## [Phase 5] Render 백엔드 배포
+
+- **시도**: FastAPI 백엔드를 Render Web Service(Free)로 배포, 로컬
+  `uvicorn`+LAN IP 방식을 실제 인터넷 주소로 교체.
+- **선택**: Root Directory `apps/server`, Start Command
+  `uvicorn main:app --host 0.0.0.0 --port $PORT`, Health Check Path `/health`.
+  Python 버전은 Render가 2026-02-11 이후 기본값으로 3.14.3을 쓰기 시작해
+  로컬(3.14.6)과 거의 동일 — `apps/server/.python-version`에 `3.14`로 명시만
+  해둠, 별도 조정 불필요했음.
+- **트러블슈팅**: 첫 배포에서 `KeyError: 'SUPABASE_URL'`로 크래시 — 원인은
+  Render Environment Variables에 `apps/server/.env`가 아니라
+  `apps/app/.env`(프론트엔드용, `EXPO_PUBLIC_...` 접두사)를 잘못 붙여넣은
+  것. 올바른 파일로 다시 설정 후 정상 기동.
+- **결과**: `https://tabilog-7iky.onrender.com/health` 정상 응답 확인, 실제
+  로그인 토큰으로 `/trips` 호출해 DB에 저장된 실제 여행 데이터까지 정상
+  조회됨을 확인. `apps/app/.env`의 `EXPO_PUBLIC_API_URL`을 이 주소로 교체,
+  로컬 uvicorn 없이(같은 Wi-Fi 아니어도) Android Expo Go에서 정상 동작 확인.
+
+---
