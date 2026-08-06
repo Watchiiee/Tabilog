@@ -195,3 +195,26 @@
   fallback 정책이 실제로 의도대로 동작함을 우연히 실전 검증.
 
 ---
+
+## [Phase 3] Expo Router 세팅 + 로그인 화면
+
+- **시도**: `apps/app`에 Expo Router를 도입하고, email/password 로그인
+  화면 + 인증 게이트 + 로그아웃까지 구현.
+- **선택**:
+  - 인증 방식: 소셜 로그인(Kakao/Google) 개발자 앱이 아직 없어 email/password로
+    우선 플로우를 검증. 소셜 로그인 버튼은 나중에 로그인 화면에 추가.
+  - 라우팅 구조: `app/_layout.tsx`에서 Supabase 세션을 구독하고,
+    최신 Expo Router 공식 패턴인 `<Stack.Protected guard={...}>`로
+    `(app)`/`(auth)` 그룹을 조건 렌더링 (예전의 `useSegments`+`router.replace`
+    수동 리다이렉트 방식 대신 — 공식 문서에서 현재 권장하는 방식임을 확인 후 채택).
+  - 기존 `App.tsx`/`index.ts`는 삭제, `package.json`의 `main`을
+    `expo-router/entry`로 변경, `app.json`에 `scheme: "tabilog"` 추가
+    (Expo Router 딥링크 요구사항).
+- **이유**: 화면이 늘어나기 전에 표준 파일 기반 라우팅을 먼저 잡아두는 게
+  이후 화면 추가 비용을 줄임. Stack.Protected는 로그인 상태 변화에 따라
+  자동으로 화면을 전환해줘서 수동 리다이렉트 로직/깜빡임 버그 위험이 적음.
+- **결과**: `expo-doctor` 18/18 통과, `expo export -p android` 정상 번들.
+  Android Expo Go에서 실제 확인 — 로그인 성공 시 인증 후 화면 전환, 잘못된
+  비밀번호 시 에러 메시지 표시, 로그아웃 시 로그인 화면으로 복귀 모두 정상.
+
+---
