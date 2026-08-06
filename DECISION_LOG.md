@@ -116,3 +116,29 @@
     실제로는 적용되어 있음을 확인.
 
 ---
+
+## [Phase 2] Supabase DDL (초기 스키마)
+
+- **시도**: `PROJECT_PLAN.md`의 DB 스키마(users/trips/places/photos)를
+  `apps/server/db/migrations/0001_init.sql`로 작성, Supabase SQL Editor에서
+  직접 실행.
+- **선택**:
+  - DB 접근 구조: FastAPI가 service_role 연결문자열로 Postgres에 직접 접속
+    (SQLAlchemy). JWT 검증/권한 체크는 Python 코드에서 직접 처리, PostgREST는
+    거치지 않음.
+  - 마이그레이션 도구: Alembic 없이 플레인 SQL 파일. 현재 규모에는 과함.
+  - 4개 테이블 모두 `ENABLE ROW LEVEL SECURITY` + 정책은 하나도 안 만듦 →
+    service_role(FastAPI)은 RLS를 우회해 정상 동작하고, anon/authenticated
+    롤(앱에 박힌 anon key로 PostgREST 직접 호출)은 기본적으로 전부 거부됨.
+    Cloudinary unsigned preset과 동일한 이유의 방어선.
+  - `auth.users` 신규 가입 시 `public.users`에 자동으로 행을 만드는 트리거
+    (`handle_new_user`) 추가 — 소셜 로그인 성공 시 백엔드 코드 없이
+    `public.users`가 항상 채워지도록 함.
+- **이유**: Phase 2 첫 하위 단계로 DDL이 있어야 이후 FastAPI CRUD/JWT
+  미들웨어를 만들 수 있음. DB 접근 구조는 PROJECT_PLAN의 "FastAPI JWT
+  미들웨어 + CRUD" 문구와 가장 직접적으로 맞아떨어지는 선택.
+- **결과**: Supabase Table Editor에서 4개 테이블 및 FK 관계 정상 생성 확인.
+  Authentication → Add user로 테스트 계정 생성 → `public.users`에 행이
+  자동으로 생성되는 것 확인 (트리거 정상 동작).
+
+---
