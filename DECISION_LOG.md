@@ -84,3 +84,35 @@
   `App.tsx`를 템플릿 상태로 되돌림 — `lib/supabase.ts`는 Phase 3에서 재사용.
 
 ---
+
+## [Phase 1] Cloudinary unsigned preset 세팅 확인
+
+- **시도**: 리스크 #3("unsigned preset 노출 리스크")에 따라 `tabilog_unsigned`
+  preset을 안전하게 설정하고, 제한이 실제로 작동하는지 curl로 직접 검증.
+- **선택 (preset 설정값)**:
+  - Signing mode: Unsigned / Asset folder: `tabilog/photos` (클라이언트가 다른
+    folder를 보내도 무시되고 이 폴더로 강제됨)
+  - Disallow public ID: 켬 (클라이언트가 임의 public_id를 지정해도 무시,
+    항상 서버가 생성한 unguessable ID 사용)
+  - Allowed formats: `jpg,png,heic,webp`
+  - Max file size: 10MB (`10485760` bytes)
+  - Unique filename 켬 / Overwrite 끔
+  - **콘솔 UI의 한계**: `max_file_size`는 Cloudinary 콘솔 화면에 필드 자체가
+    없음 — Admin API로만 설정 가능함을 확인. 사용자로부터 API Key/Secret을
+    일회성으로 받아 `PUT /upload_presets/tabilog_unsigned` 호출로 설정,
+    저장하거나 커밋하지 않음.
+  - `apps/app/.env`/`.env.example`에 `EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME`,
+    `EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET` 추가 (Supabase와 동일 패턴).
+    실제 업로드 코드는 Phase 3 범위.
+- **이유**: unsigned preset은 preset 이름만 알면 누구나 요청을 보낼 수 있어,
+  폴더/포맷/크기/public_id 제한이 preset 자체에 강제돼야 안전함. 콘솔 클릭만으론
+  전체 방어선을 세울 수 없다는 걸 실제로 확인했으므로 Admin API 보완이 필요했음.
+- **결과 (curl 직접 검증, empirical)**:
+  - 정상 업로드(png, favicon.png) → 성공, `asset_folder: "tabilog/photos"`,
+    unguessable `public_id` 확인. 테스트 후 asset은 삭제함.
+  - 비허용 포맷(txt) → `"Raw file format txt not allowed"` 거부 확인.
+  - 크기 제한(11MB 파일) → `"File size too large. Got 11393493. Maximum is
+    10485760."` 거부 확인 — GET 응답에는 `max_file_size`가 표시되지 않지만
+    실제로는 적용되어 있음을 확인.
+
+---
