@@ -393,3 +393,42 @@
   로컬 uvicorn 없이(같은 Wi-Fi 아니어도) Android Expo Go에서 정상 동작 확인.
 
 ---
+
+## [Phase 5 완료] EAS Build로 Android APK 빌드
+
+- **시도**: Expo Go가 아닌 독립 설치 APK를 EAS Build(Free)로 생성.
+  `app.json`에 `android.package`(`com.watchiiee.tabilog`) 추가,
+  `eas init`으로 프로젝트 연결(대시보드에서 미리 만들어둔 빈 프로젝트와는
+  별개로 새로 생성됨 — 안 쓰는 쪽은 나중에 정리하면 됨), `eas.json`
+  `preview` 프로필을 `buildType: apk`로 설정. `EXPO_PUBLIC_*` 5개 값은
+  로컬 `.env`가 클라우드 빌드에 전달되지 않는다는 걸 문서로 확인하고
+  `eas env:set`으로 `preview` environment에 등록.
+- **트러블슈팅 1 (첫 빌드 후 발견)**: 앱 대부분은 잘 작동했지만 "경로 재생"
+  화면(지도)에서 크래시. 원인: Expo Go는 구글이 제공하는 개발용 공유 키로
+  지도가 그냥 되지만, 독립 빌드는 **자체 Google Maps API 키**가 필요함
+  (Expo Go에서만 통했던 것 — 이번에도 "Expo Go에서 되는 게 프로덕션에서도
+  된다는 보장은 아니다"라는 같은 교훈).
+  - Web 재검토 여부를 사용자가 먼저 물어봄: 이미 결제 크레딧이 있는 Google
+    Cloud 계정이 있어 Android 키 발급이 장벽이 아니고, Google Maps JS API는
+    `language=ko`로 MapLibre+Wikidata 방식보다 확실한 한글화가 되어 예전에
+    Web을 접은 이유(번역 품질) 중 하나가 사실상 해결됨을 확인. 다만 Web
+    복원은 지도 교체보다 훨씬 큰 작업(빌드 도구 재설치, 기존 화면 전부
+    재검증)이라 **지금은 Android 크래시만 고치고 Web 재검토는 별도 계획으로
+    미루기로 결정**.
+  - 사용자가 Google Cloud Console에서 Android용 키 발급(패키지명 +
+    `eas credentials`로 확인한 SHA1로 제한).
+  - `app.json` → `app.config.js`로 전환해 `android.config.googleMaps.apiKey`에
+    `process.env.GOOGLE_MAPS_ANDROID_API_KEY` 연결 (처음엔 `react-native-maps`를
+    config plugin으로 등록했다가 실패 — 이 버전은 자체 config plugin이 없어서
+    Expo 내장 `android.config.googleMaps` 필드를 써야 했음).
+  - 이 키는 `EXPO_PUBLIC_` 접두사 없음 — JS 번들에 노출할 필요 없이 네이티브
+    빌드 설정에만 쓰이므로, 로컬 `.env` + EAS `env:set`(sensitive)에 등록.
+    실제 값은 사용자가 직접 넣고 저에게는 공유하지 않음.
+- **결과**: 재빌드 후 실제 기기에 설치해 확인 — "경로 재생" 지도 정상 동작,
+  나머지 화면도 모두 정상. UI 다듬기는 남아있지만 이건 별도 단계에서 진행.
+  이걸로 `PROJECT_PLAN.md` 로드맵의 Phase 1~5 전체 완료.
+- **작업 방식 변경(사용자 요청)**: 최종 완성 전까지는 매 기능마다 APK를
+  뽑지 않고 로컬(Expo Go)로만 검증, APK는 사용자가 명시적으로 요청할 때만
+  빌드하는 것으로 합의.
+
+---
