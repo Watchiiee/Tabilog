@@ -142,3 +142,34 @@
   자동으로 생성되는 것 확인 (트리거 정상 동작).
 
 ---
+
+## [Phase 2] FastAPI JWT 미들웨어 + CRUD
+
+- **시도**: FastAPI가 Supabase JWT를 직접 검증하고, trips/places/photos
+  CRUD를 제공하도록 구현.
+- **사전 확인 (empirical)**:
+  - JWT 서명: `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` → `ES256`
+    (비대칭 키) 확인. `PyJWKClient`로 서명 검증.
+  - DB 연결: Direct connection 호스트(`db.<ref>.supabase.co`)는 DNS 자체가
+    안 잡힘(이 프로젝트는 미지원) → Session pooler
+    (`aws-0-ap-northeast-2.pooler.supabase.com:5432`, 유저명
+    `postgres.<project-ref>`)로 psql 연결 성공.
+- **구현**:
+  - `db.py`(async SQLAlchemy 엔진), `models.py`(User/Trip/Place/Photo),
+    `schemas.py`(Pydantic), `auth.py`(JWT 검증 dependency),
+    `deps.py`(소유권 확인 헬퍼 `get_owned_trip`/`get_owned_place`),
+    `routers/{trips,places,photos}.py`
+  - 소유권 체크: place는 부모 trip의 `user_id`, photo는 place→trip을 따라가
+    확인. 소유자가 아니거나 없는 리소스면 404로 통일(존재 노출 방지).
+- **버그 수정 2건 (curl 테스트로 발견)**:
+  - `created_at`이 INSERT 시 NULL로 들어가 not-null 제약 위반 → SQLAlchemy
+    모델에 `server_default=func.now()` 누락이 원인, 추가해서 해결.
+  - Authorization 헤더가 없을 때 401이 아니라 422가 나옴 → `Header(...)`
+    (필수)가 FastAPI validation에서 먼저 걸려서 발생. `Header(default=None)`로
+    바꾸고 코드에서 직접 401을 던지도록 수정.
+- **결과 (curl 직접 검증, empirical)**: 테스트 계정으로 실제 로그인해 JWT
+  발급 → 인증 없이 호출 시 401, trip/place/photo 생성·조회·수정 정상,
+  존재하지 않거나 소유하지 않은 trip 조회 시 404, trip 삭제 시 하위
+  place/photo까지 cascade 삭제되는 것까지 모두 확인.
+
+---
