@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Text, Button, FlatList, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Button, FlatList, Image, Share, StyleSheet, ActivityIndicator } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { api } from '../../../../lib/api';
 import type { Photo, Place, Trip } from '../../../../lib/types';
@@ -60,6 +60,15 @@ export default function TripDetail() {
     }
   };
 
+  const handleShare = () => {
+    if (!trip) return;
+    const lines = [trip.title];
+    if (trip.sentiment_badge) lines.push(`🏷️ ${trip.sentiment_badge}`);
+    if (trip.start_date || trip.end_date) lines.push(`${trip.start_date} ~ ${trip.end_date}`);
+    if (trip.solar_summary) lines.push('', trip.solar_summary);
+    Share.share({ message: lines.join('\n') });
+  };
+
   if (loading || !trip) {
     return (
       <View style={styles.container}>
@@ -111,6 +120,7 @@ export default function TripDetail() {
 
       <Button title="장소 추가" onPress={() => router.push(`/trips/${id}/places/new`)} />
       <Button title="경로 재생" onPress={() => router.push(`/trips/${id}/replay`)} />
+      <Button title="공유" onPress={handleShare} />
     </View>
   );
 }
