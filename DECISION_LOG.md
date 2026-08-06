@@ -352,3 +352,24 @@
   정상 구성. 이걸로 Phase 4(지도 애니메이션 & 공유 기능) 완료.
 
 ---
+
+## [Phase 5] 통계 리포트 카드
+
+- **시도**: `trips/[id]/stats.tsx`에서 방문 장소 수/사진 수/이동 거리/여행
+  기간을 계산해 카드로 보여주고 이미지로 공유.
+- **선택**:
+  - 거리 계산은 새 백엔드 엔드포인트 없이 클라이언트에서 좌표 있는 장소들을
+    haversine으로 계산, 기존 `PATCH /trips/{id}`(이미 `total_distance` 필드
+    지원)로 저장 — 스키마에 있던 필드를 처음으로 실제 채움.
+  - 이미지 캡처는 `react-native-view-shot`(Expo Go SDK 54에 호환 버전
+    4.0.3이 이미 포함돼 있음을 리서치로 확인 후 사용), 공유는 RN 코어
+    `Share` 대신 `expo-sharing`(`Sharing.shareAsync`) 사용 — 로컬 파일을
+    Android에서 공유하려면 content URI 처리가 필요한데 `expo-sharing`이
+    이를 해줌. 갤러리 저장(`expo-media-library`)은 저번 EXIF 스파이크 때
+    Expo Go 권한 문제로 막혔던 것과 같은 계열이라 이번엔 시도하지 않고
+    공유 시트로 대체.
+- **결과**: Android Expo Go에서 실제 확인 — 통계 값 정상 계산, "이미지로
+  공유" 캡처 및 공유 시트 정상 동작. 이번엔 예상대로 Expo Go에서 바로 됨
+  (view-shot/sharing 둘 다 리서치에서 예측한 대로 문제없이 동작).
+
+---

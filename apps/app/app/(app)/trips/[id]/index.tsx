@@ -120,6 +120,7 @@ export default function TripDetail() {
 
       <Button title="장소 추가" onPress={() => router.push(`/trips/${id}/places/new`)} />
       <Button title="경로 재생" onPress={() => router.push(`/trips/${id}/replay`)} />
+      <Button title="통계 보기" onPress={() => router.push(`/trips/${id}/stats`)} />
       <Button title="공유" onPress={handleShare} />
     </View>
   );
