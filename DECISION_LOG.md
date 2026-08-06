@@ -245,3 +245,38 @@
   생성까지 전체 플로우 정상 동작.
 
 ---
+
+## [Phase 3] EXIF GPS 스파이크 → 위치는 수동 입력이 기본 경로 (리스크 #2 재정의)
+
+- **시도**: 사진 EXIF에서 위치/시간을 자동으로 뽑아 장소를 채우는 기능을
+  만들기 전에, 실제 폰에서 GPS가 살아있는지부터 확인. `expo-image-picker`
+  (`exif: true`)와 `expo-media-library`(`getAssetInfoAsync`) 두 경로를
+  실제 갤럭시 폰의 카메라 직찍 사진으로 테스트.
+- **발견 사실 (empirical)**:
+  - `image-picker` 경로: `DateTimeOriginal`은 정상 — 시간은 살아있음.
+    `GPSLatitude`/`GPSLongitude`는 `0`, `GPSLatitudeRef`/`GPSLongitudeRef`는
+    빈 문자열 — 카메라로 직접 찍은 사진인데도 위치 정보가 완전히 지워짐.
+    (`assetId`도 `null` — Android 사진 선택기 자체가 스코프를 제한함)
+  - `media-library` 경로: Expo Go 자체가 "더 이상 미디어 라이브러리 전체
+    접근을 제공할 수 없다"고 명시하며 실패 — 커스텀 개발 빌드(EAS Build)
+    없이는 이 우회조차 테스트할 수 없고, 된다는 보장도 없음.
+  - 즉 `PROJECT_PLAN.md` 리스크 #2가 예상한 것(카톡/인스타 경유·스크린샷만
+    EXIF 없음)보다 훨씬 넓은 문제 — Android 10+ 사진 선택기를 쓰는 한
+    사진 출처와 무관하게 GPS는 거의 항상 지워짐.
+- **선택**: 지금은 EAS Build 도입(개발 빌드로 전환, Expo Go 대신 매번 그
+  빌드를 설치해야 함) 없이, **얻을 수 있는 메타데이터(시간)는 자동으로 채우고
+  위치는 사용자가 지도에서 직접 입력하는 것을 기본 경로로** 채택. GPS 자동
+  핀은 나중에 EAS Build 도입을 별도로 결정할 때 재검토.
+- **이유**: 커스텀 개발 빌드 전환은 이번 기능 하나를 위해 감당하기엔 인프라
+  비용이 커짐(Expo Go의 즉시 테스트 편의성을 잃음). 시간 자동 채우기만으로도
+  핵심 가치는 어느 정도 유지되고, 위치 수동 입력은 이미 리스크 #2에서
+  예정했던 fallback을 기본 경로로 승격시키는 정도의 변경.
+- **결과**: `expo-media-library`는 미사용 제거, `expo-image-picker`만 유지.
+  다음 단계(사진 선택 + 위치 수동 입력 + Cloudinary 업로드 기능)를 이 결정
+  기준으로 설계.
+- **부수 정리**: `npm install`/`uninstall` 중 `react-dom@19.2.8`이 optional
+  peer로 계속 잘못 끌려들어와 `react@19.1.0`과 충돌하는 문제를 발견 —
+  `package.json`에 `"overrides": { "react-dom": "19.1.0" }`로 고정해 해결.
+  실제로 어디서도 import되지 않는 미사용 패키지라 번들에는 영향 없음.
+
+---
