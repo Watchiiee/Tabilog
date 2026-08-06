@@ -1,14 +1,15 @@
 import { useCallback, useState } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Button, FlatList, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { api } from '../../../../lib/api';
-import type { Place, Trip } from '../../../../lib/types';
+import type { Photo, Place, Trip } from '../../../../lib/types';
 
 export default function TripDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +24,16 @@ export default function TripDetail() {
       ]);
       setTrip(tripData);
       setPlaces(placesData);
+
+      const photosByPlace = await Promise.all(
+        placesData.map((place: Place) => api.get(`/places/${place.id}/photos`))
+      );
+      const firstPhotos: Record<string, string> = {};
+      placesData.forEach((place: Place, i: number) => {
+        const photos: Photo[] = photosByPlace[i];
+        if (photos[0]) firstPhotos[place.id] = photos[0].photo_url;
+      });
+      setThumbnails(firstPhotos);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -85,9 +96,14 @@ export default function TripDetail() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.placeRow}>
-            <Text style={styles.placeName}>{item.name}</Text>
-            {item.memo && <Text style={styles.placeMemo}>{item.memo}</Text>}
-            {item.rating && <Text style={styles.placeRating}>평점 {item.rating}</Text>}
+            {thumbnails[item.id] && (
+              <Image source={{ uri: thumbnails[item.id] }} style={styles.placeThumbnail} />
+            )}
+            <View style={styles.placeInfo}>
+              <Text style={styles.placeName}>{item.name}</Text>
+              {item.memo && <Text style={styles.placeMemo}>{item.memo}</Text>}
+              {item.rating && <Text style={styles.placeRating}>평점 {item.rating}</Text>}
+            </View>
           </View>
         )}
         ListEmptyComponent={<Text>아직 장소가 없어요.</Text>}
@@ -106,7 +122,15 @@ const styles = StyleSheet.create({
   summary: { fontSize: 14, lineHeight: 20 },
   error: { color: 'red' },
   sectionTitle: { fontSize: 18, fontWeight: '600', marginTop: 12 },
-  placeRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  placeRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  placeThumbnail: { width: 56, height: 56, borderRadius: 8 },
+  placeInfo: { flex: 1 },
   placeName: { fontSize: 16, fontWeight: '600' },
   placeMemo: { color: '#666' },
   placeRating: { color: '#999', fontSize: 12 },

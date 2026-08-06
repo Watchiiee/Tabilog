@@ -22,3 +22,10 @@ export type Place = {
   rating: number | null;
   visited_at: string | null;
 };
+
+export type Photo = {
+  id: string;
+  place_id: string;
+  photo_url: string;
+  created_at: string;
+};
