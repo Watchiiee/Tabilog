@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { View, TextInput, Button, Text, Image, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import MapView, { Marker } from 'react-native-maps';
 import { api } from '../../../../../lib/api';
 import { uploadPhoto } from '../../../../../lib/cloudinary';
+
+const SEOUL = { latitude: 37.5663, longitude: 126.9779 };
 
 function parseExifDateTime(value?: string): string | null {
   // EXIF DateTimeOriginal looks like "2026:07:31 14:11:15"
@@ -14,16 +17,18 @@ function parseExifDateTime(value?: string): string | null {
   return `${year}-${month}-${day}T${time}`;
 }
 
+type Coordinate = { latitude: number; longitude: number };
+
 export default function NewPlace() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [name, setName] = useState('');
   const [memo, setMemo] = useState('');
   const [rating, setRating] = useState('');
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
+  const [coordinate, setCoordinate] = useState<Coordinate | null>(null);
+  const [showMap, setShowMap] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [visitedAt, setVisitedAt] = useState<string | null>(null);
+  const [visitedAt, setVisitedAt] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -42,7 +47,7 @@ export default function NewPlace() {
 
     const asset = result.assets[0];
     setPhotoUri(asset.uri);
-    setVisitedAt(parseExifDateTime(asset.exif?.DateTimeOriginal));
+    setVisitedAt(parseExifDateTime(asset.exif?.DateTimeOriginal) ?? '');
   };
 
   const handleCreate = async () => {
@@ -53,9 +58,9 @@ export default function NewPlace() {
         name,
         memo: memo || null,
         rating: rating ? Number(rating) : null,
-        latitude: latitude ? Number(latitude) : null,
-        longitude: longitude ? Number(longitude) : null,
-        visited_at: visitedAt,
+        latitude: coordinate?.latitude ?? null,
+        longitude: coordinate?.longitude ?? null,
+        visited_at: visitedAt || null,
       });
 
       if (photoUri) {
@@ -71,6 +76,28 @@ export default function NewPlace() {
     }
   };
 
+  if (showMap) {
+    return (
+      <View style={styles.mapContainer}>
+        <MapView
+          style={styles.map}
+          initialRegion={{
+            latitude: coordinate?.latitude ?? SEOUL.latitude,
+            longitude: coordinate?.longitude ?? SEOUL.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          }}
+          onPress={(e) => setCoordinate(e.nativeEvent.coordinate)}
+        >
+          {coordinate && <Marker coordinate={coordinate} />}
+        </MapView>
+        <View style={styles.mapButtonBar}>
+          <Button title="확인" onPress={() => setShowMap(false)} disabled={!coordinate} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>장소 이름</Text>
@@ -84,32 +111,23 @@ export default function NewPlace() {
 
       <Button title="사진 선택" onPress={handlePickPhoto} />
       {photoUri && <Image source={{ uri: photoUri }} style={styles.thumbnail} />}
-      {photoUri && (
+
+      <Text style={styles.label}>방문 시각 (YYYY-MM-DDTHH:MM:SS, 선택)</Text>
+      <TextInput
+        style={styles.input}
+        value={visitedAt}
+        onChangeText={setVisitedAt}
+        placeholder="2026-08-01T14:11:15"
+        autoCapitalize="none"
+      />
+
+      <Text style={styles.label}>위치 (선택)</Text>
+      <Button title="지도에서 위치 선택" onPress={() => setShowMap(true)} />
+      {coordinate && (
         <Text style={styles.hint}>
-          {visitedAt
-            ? `촬영 시각: ${visitedAt.replace('T', ' ')}`
-            : '촬영 시각 정보가 없어요.'}{' '}
-          위치 정보는 사진에서 지워지는 경우가 많아 아래에 직접 입력해주세요.
+          선택한 위치: {coordinate.latitude.toFixed(5)}, {coordinate.longitude.toFixed(5)}
         </Text>
       )}
-
-      <Text style={styles.label}>위도 (선택)</Text>
-      <TextInput
-        style={styles.input}
-        value={latitude}
-        onChangeText={setLatitude}
-        keyboardType="numbers-and-punctuation"
-        placeholder="예: 33.4587"
-      />
-
-      <Text style={styles.label}>경도 (선택)</Text>
-      <TextInput
-        style={styles.input}
-        value={longitude}
-        onChangeText={setLongitude}
-        keyboardType="numbers-and-punctuation"
-        placeholder="예: 126.9425"
-      />
 
       {error && <Text style={styles.error}>{error}</Text>}
 
@@ -125,4 +143,7 @@ const styles = StyleSheet.create({
   error: { color: 'red' },
   thumbnail: { width: '100%', height: 200, borderRadius: 8 },
   hint: { color: '#666', fontSize: 12 },
+  mapContainer: { flex: 1 },
+  map: { flex: 1 },
+  mapButtonBar: { padding: 16 },
 });
